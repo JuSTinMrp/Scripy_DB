@@ -1,2 +1,4 @@
 nmap script path - /usr/share/nmap/scripts
 
+common db and port -- https://secbot.com/docs/ports/common-ports
+
