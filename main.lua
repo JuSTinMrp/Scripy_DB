@@ -1,7 +1,7 @@
 -- HEAD -- -- Meta data --
 
 description = [[
-Advanced Database Detection Script by cyb3rr4v
+Powerful Database Detection Script by cyb3rr4v
 ]]
 
 author= "Ram Praveen (cyberrav)"
@@ -22,9 +22,18 @@ args = {
 
 -- opional nse script like --script
 -- dependencies = {"smb-brute"}
-require("http")
-require("mysql")
-require("pgsql")
+
+-- setting up local variables
+local nmap = require("nmap")
+local shortport = require("shortport")
+local stdnse = require("stdnse")
+local string = require("string")
+local table = require("table")
+local http = require("http")
+local mysql = require("mysql")
+local pgsql = require("pgsql")
+
+
 -- require("ms-sql-info")
 -- require("oracle")
 
