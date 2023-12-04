@@ -1,4 +1,106 @@
 nmap script path - /usr/share/nmap/scripts
 
 common db and port -- https://secbot.com/docs/ports/common-ports
+reference script -- https://github.com/hackertarget/nmap-nse-scripts/blob/master/hostmap-hackertarget.nse
 
+-- Metadata
+description = "Enhanced Database Detection Script"
+categories = {"discovery", "safe"}
+
+-- Define script arguments
+author = "Your Name"
+license = "Same as Nmap--See https://nmap.org/book/man-legal.html"
+args = {
+  {arg = "--count", name = "count", desc = "Limit scan to the specified number of databases", type = "number"},
+  {arg = "--check", name = "check", desc = "Specify 'popular' to scan only for popular databases", type = "string"},
+}
+
+-- Load external dependencies
+local http = require("http")
+
+-- Enable threading for parallel scanning
+nmap.registry.threading = true
+
+-- Read the list of databases from the external file
+local function read_database_list(filename)
+  local file = io.open(filename, "r")
+  if file then
+    local databases = {}
+    for line in file:lines() do
+      table.insert(databases, line)
+    end
+    file:close()
+    return databases
+  else
+    stdnse.debug1("Failed to open the database list file")
+    return nil
+  end
+end
+
+-- Read the list of popular databases from another external file
+local function read_popular_databases(filename)
+  local file = io.open(filename, "r")
+  if file then
+    local popularDatabases = {}
+    for line in file:lines() do
+      table.insert(popularDatabases, line)
+    end
+    file:close()
+    return popularDatabases
+  else
+    stdnse.debug1("Failed to open the popular databases list file")
+    return nil
+  end
+end
+
+-- The main function that gets executed for each matched host
+action = function(host)
+  local count = nmap.registry.args.count or 0
+  local checkPopular = nmap.registry.args.check == "popular"
+
+  -- Read the list of databases from the external file
+  local databases
+  if checkPopular then
+    -- Read the list of popular databases from another external file
+    databases = read_popular_databases("/path/to/popular_databases.lst")
+  else
+    databases = read_database_list("/path/to/databases.lst")
+  end
+
+  if not databases then
+    return
+  end
+
+  local scannedCount = 0
+
+  -- Iterate through all open ports
+  for _, port in ipairs(host.ports or {}) do
+    if port.protocol == "tcp" and scannedCount < count then
+      for _, database in ipairs(databases) do
+        scan_database(host, port, database)
+        scannedCount = scannedCount + 1
+      end
+    else
+      break  -- Stop scanning after reaching the specified count
+    end
+  end
+end
+
+-- Function to scan a specific database type on a port
+function scan_database(host, port, database)
+  -- Use a thread to scan databases concurrently
+  local thread = nmap.new_thread(function()
+    -- Customize the User-Agent for HTTP requests
+    http.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+
+    -- Your logic to scan the specified database type goes here
+    -- For example, a simple HTTP request to detect a web application's database
+    local response = http.get("http://" .. host.ip .. ":" .. port.number)
+    if response and response.status == 200 then
+      print(string.format("Detected %s database on %s:%d", database, host.ip, port.number))
+    end
+  end)
+
+  -- Start the thread
+  thread:join()
+end

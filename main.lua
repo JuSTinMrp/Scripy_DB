@@ -8,6 +8,12 @@ author= "Ram Praveen (cyberrav)"
 categories = {"default", "discovery", "safe"}
 license = "Same as Nmap--See https://nmap.org/book/man-legal.html"
 
+args = {
+    {arg = "--count", name = "count", desc = "Limit the no of dbms scan", type = "number"},
+    {arg = "--check", name = "filter", desc = "'popular' -> Only checks for popular dbms", type = "string"},
+}
+
+
 ---
 -- @output
 -- PORT     STATE   SERVICE     VERSION
