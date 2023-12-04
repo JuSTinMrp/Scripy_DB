@@ -1,5 +1,18 @@
 -- HEAD -- -- Meta data --
 
+local nmap = require("nmap")
+local shortport = require("shortport")
+local stdnse = require("stdnse")
+local string = require("string")
+local table = require("table")
+local http = require("http")
+local mysql = require("mysql")
+local pgsql = require("pgsql")
+
+-- require("ms-sql-info")
+-- require("oracle")
+
+
 description = [[
 Powerful Database Detection Script by cyb3rr4v
 ]]
@@ -15,57 +28,63 @@ args = {
 
 
 ---
+-- @usage
+-- checks for all dbms 
+-- nmap --script=justIN-db <targets>
+
+-- checks for popular dbms 
+-- sudo nmap --script=justIN-db --script-args check=popular <targets>
+
+-- limited dbms scan  
+-- sudo nmap --script=justIN-db --script-args count=5 <targets>
+
+---
 -- @output
 -- PORT     STATE   SERVICE     VERSION
 -- 3306/tcp open    MySQL       MySQL 5.7 
+-- | /*
 
+-- Parallel Threading 
+nmap.registry.threading = true
 
 -- opional nse script like --script
 -- dependencies = {"smb-brute"}
 
 -- setting up local variables
-local nmap = require("nmap")
-local shortport = require("shortport")
-local stdnse = require("stdnse")
-local string = require("string")
-local table = require("table")
-local http = require("http")
-local mysql = require("mysql")
-local pgsql = require("pgsql")
 
-
--- require("ms-sql-info")
--- require("oracle")
 
 -- RULE --returns only true or false...if true it executes the ACTION
+local function read_database_list(filename)
+    local file = io.open(filename, "r")
+    if file then
+      local databases = {}
+      for line in file:lines() do
+        table.insert(databases, line)
+      end
+      file:close()
+      return databases
+    else
+      stdnse.debug1("Failed to open the database list file")
+      return nil
+    end
+  end
 
-hostrule = function(host)
-    return port.protocol == "tcp" and (port.number == 3306 or port.number == 5432 or port.number == 1433 or port.number == 1521)
-end
+  local function read_popular_databases(filename)
+    local file = io.open(filename, "r")
+    if file then
+      local popularDatabases = {}
+      for line in file:lines() do
+        table.insert(popularDatabases, line)
+      end
+      file:close()
+      return popularDatabases
+    else
+      stdnse.debug1("Failed to open the popular databases list file")
+      return nil
+    end
+  end
+
+
 
 
 -- ACTION --
-
-action = function(host, port)
-    if port.number == 3306 then
-    local result = mysql.version()
-    if result then
-        print(string.format("MySQL version detected on %s:%d - %s", host.ip, port.number, result))
-end
-    elseif port.number == 5432 then
-    local result = pgsql.version()
-    if result then
-        print(string.format("PostgreSQL version detected on %s:%d - %s", host.ip, port.number, result))
-end
-    elseif port.number == 1433 then
-    local result = ms_sql.version()
-    if result then
-        print(string.format("Microsoft SQL Server detected on %s:%d - %s", host.ip, port.number, result))
-end
-    elseif port.number == 1521 then
-    local result = oracle.version()
-    if result then
-        print(string.format("Oracle Database version detected on %s:%d - %s", host.ip, port.number, result))
-    end
-    end
-end

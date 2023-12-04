@@ -2,24 +2,8 @@ nmap script path - /usr/share/nmap/scripts
 
 common db and port -- https://secbot.com/docs/ports/common-ports
 reference script -- https://github.com/hackertarget/nmap-nse-scripts/blob/master/hostmap-hackertarget.nse
+test applicaiton -- https://sweet-bombolone-176d6a.netlify.app
 
--- Metadata
-description = "Enhanced Database Detection Script"
-categories = {"discovery", "safe"}
-
--- Define script arguments
-author = "Your Name"
-license = "Same as Nmap--See https://nmap.org/book/man-legal.html"
-args = {
-  {arg = "--count", name = "count", desc = "Limit scan to the specified number of databases", type = "number"},
-  {arg = "--check", name = "check", desc = "Specify 'popular' to scan only for popular databases", type = "string"},
-}
-
--- Load external dependencies
-local http = require("http")
-
--- Enable threading for parallel scanning
-nmap.registry.threading = true
 
 -- Read the list of databases from the external file
 local function read_database_list(filename)
@@ -54,9 +38,10 @@ local function read_popular_databases(filename)
 end
 
 -- The main function that gets executed for each matched host
-action = function(host)
+action = function(host, port)
   local count = nmap.registry.args.count or 0
   local checkPopular = nmap.registry.args.check == "popular"
+  local customPorts = parse_ports(nmap.registry.args.ports)
 
   -- Read the list of databases from the external file
   local databases
@@ -73,13 +58,16 @@ action = function(host)
 
   local scannedCount = 0
 
+  -- Check if the specified port is in the list of custom ports
+  if customPorts and not table.contains(customPorts, port.number) then
+    return
+  end
+
   -- Iterate through all open ports
-  for _, port in ipairs(host.ports or {}) do
-    if port.protocol == "tcp" and scannedCount < count then
-      for _, database in ipairs(databases) do
-        scan_database(host, port, database)
-        scannedCount = scannedCount + 1
-      end
+  for _, database in ipairs(databases) do
+    if scannedCount < count then
+      scan_database(host, port, database)
+      scannedCount = scannedCount + 1
     else
       break  -- Stop scanning after reaching the specified count
     end
@@ -88,19 +76,97 @@ end
 
 -- Function to scan a specific database type on a port
 function scan_database(host, port, database)
-  -- Use a thread to scan databases concurrently
-  local thread = nmap.new_thread(function()
-    -- Customize the User-Agent for HTTP requests
-    http.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+  local result = nil
 
-    -- Your logic to scan the specified database type goes here
-    -- For example, a simple HTTP request to detect a web application's database
-    local response = http.get("http://" .. host.ip .. ":" .. port.number)
-    if response and response.status == 200 then
-      print(string.format("Detected %s database on %s:%d", database, host.ip, port.number))
+  -- Your logic to scan the specified database type goes here
+  -- For example, a simple HTTP request to detect a web application's database
+  local response = http.get("http://" .. host.ip .. ":" .. port.number)
+  if response and response.status == 200 then
+    result = string.format("%d/tcp open    %s       %s", port.number, database, "Detected Version")
+    print(result)
+    return true
+  end
+
+  -- Add more detection logic for other types of databases as needed
+
+  return false
+end
+
+-- Helper function to check if a value exists in a table
+table.contains = function(tbl, value)
+  for _, v in ipairs(tbl) do
+    if v == value then
+      return true
     end
-  end)
+  end
+  return false
+end
 
-  -- Start the thread
-  thread:join()
+
+--------------------------------------------------------
+
+-- HEAD -- -- Meta data --
+
+local nmap = require("nmap")
+local shortport = require("shortport")
+local stdnse = require("stdnse")
+local string = require("string")
+local table = require("table")
+local http = require("http")
+local mysql = require("mysql")
+local pgsql = require("pgsql")
+
+-- require("ms-sql-info")
+-- require("oracle")
+
+
+description = [[
+Powerful Database Detection Script by cyb3rr4v
+]]
+
+author= "Ram Praveen (cyberrav)"
+categories = {"default", "discovery", "safe"}
+license = "Same as Nmap--See https://nmap.org/book/man-legal.html"
+
+args = {
+    {arg = "--count", name = "count", desc = "Limit the no of dbms scan", type = "number"},
+    {arg = "--check", name = "filter", desc = "'popular' -> Only checks for popular dbms", type = "string"},
+}
+
+
+---
+-- @usage
+-- checks for all dbms 
+-- nmap --script=justIN-db <targets>
+
+-- checks for popular dbms 
+-- sudo nmap --script=justIN-db --script-args check=popular <targets>
+
+-- limited dbms scan  
+-- sudo nmap --script=justIN-db --script-args count=5 <targets>
+
+---
+-- @output
+-- PORT     STATE   SERVICE     VERSION
+-- 3306/tcp open    MySQL       MySQL 5.7 
+-- | /*
+
+-- opional nse script like --script
+-- dependencies = {"smb-brute"}
+
+-- setting up local variables
+
+
+-- RULE --returns only true or false...if true it executes the ACTION
+-- RULE -- Returns true for port 27017, service "mongod," and open or filtered state
+portrule = function(host, port)
+    print("checking")
+    return port.number == 27017 and port.service == "mongod" and (port.state == "open" or port.state == "filtered")
+end
+
+
+-- ACTION --
+action = function(host, port)
+    print("Condition met. Executing action.")
+    print("hello world") 
 end
