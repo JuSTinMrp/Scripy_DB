@@ -57,34 +57,67 @@ nmap.registry.threading = true
 local function read_database_list(filename)
     local file = io.open(filename, "r")
     if file then
-      local databases = {}
-      for line in file:lines() do
-        table.insert(databases, line)
-      end
-      file:close()
-      return databases
+        local databases = {}
+        for line in file:lines() do
+            table.insert(databases, line)
+        end
+        file:close()
+        return databases
     else
-      stdnse.debug1("Failed to open the database list file")
-      return nil
+        stdnse.debug1("dbms.lst is not located... :(")
+        return nil
     end
-  end
+end
 
-  local function read_popular_databases(filename)
+local function read_popular_databases(filename)
     local file = io.open(filename, "r")
     if file then
-      local popularDatabases = {}
-      for line in file:lines() do
-        table.insert(popularDatabases, line)
-      end
-      file:close()
-      return popularDatabases
+        local popularDatabases = {}
+        for line in file:lines() do
+            table.insert(popularDatabases, line)
+        end
+        file:close()
+        return popularDatabases
     else
-      stdnse.debug1("Failed to open the popular databases list file")
-      return nil
+        stdnse.debug1("popular_dbms.lst is not located... :(")
+        return nil
     end
-  end
-
-
-
+end
 
 -- ACTION --
+action = function(host, port)
+    local count = nmap.registry.args.count or 0
+    local checkPopular = nmap.registry.args.check == "popular"
+    local customPorts = parse_ports(nmap.registry.args.ports)
+
+    local databases
+    if checkPopular then
+        databases = read_popular_databases("popular_dbms.lst")
+    else
+        databases = read_database_list("dbms.lst")
+    end
+
+    if not databases then
+        return
+    end
+
+    local scannedCount = 0
+    for _, database in ipairs(databases) do
+        if scannedCount < count then
+            scan_database(host, port, database)
+            cannedCount = scannedCount + 1
+        else
+            break
+        end
+    end
+    end
+
+
+table.contains = function(tbl, value)
+    for _, v in ipairs(tbl) do
+        if v == value then
+            return true
+        end
+    end
+    return false
+end

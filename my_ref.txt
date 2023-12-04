@@ -47,9 +47,9 @@ action = function(host, port)
   local databases
   if checkPopular then
     -- Read the list of popular databases from another external file
-    databases = read_popular_databases("/path/to/popular_databases.lst")
+    databases = read_popular_databases("popular_dbms.lst")
   else
-    databases = read_database_list("/path/to/databases.lst")
+    databases = read_database_list("dbms.lst")
   end
 
   if not databases then
