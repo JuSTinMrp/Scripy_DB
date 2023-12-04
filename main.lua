@@ -1,5 +1,6 @@
 -- HEAD -- -- Meta data --
 
+-- local variables --
 local nmap = require("nmap")
 local shortport = require("shortport")
 local stdnse = require("stdnse")
@@ -8,6 +9,37 @@ local table = require("table")
 local http = require("http")
 local mysql = require("mysql")
 local pgsql = require("pgsql")
+
+
+local function read_database_list(filename)
+    local file = io.open(filename, "r")
+    if file then
+        local databases = {}
+        for line in file:lines() do
+            table.insert(databases, line)
+        end
+        file:close()
+        return databases
+    else
+        stdnse.debug1("dbms.lst is not located... :(")
+        return nil
+    end
+end
+
+local function read_popular_databases(filename)
+    local file = io.open(filename, "r")
+    if file then
+        local popularDatabases = {}
+        for line in file:lines() do
+            table.insert(popularDatabases, line)
+        end
+        file:close()
+        return popularDatabases
+    else
+        stdnse.debug1("popular_dbms.lst is not located... :(")
+        return nil
+    end
+end
 
 -- require("ms-sql-info")
 -- require("oracle")
@@ -54,35 +86,12 @@ nmap.registry.threading = true
 
 
 -- RULE --returns only true or false...if true it executes the ACTION
-local function read_database_list(filename)
-    local file = io.open(filename, "r")
-    if file then
-        local databases = {}
-        for line in file:lines() do
-            table.insert(databases, line)
-        end
-        file:close()
-        return databases
-    else
-        stdnse.debug1("dbms.lst is not located... :(")
-        return nil
-    end
+
+portrule = function(host, port)
+    return true
 end
 
-local function read_popular_databases(filename)
-    local file = io.open(filename, "r")
-    if file then
-        local popularDatabases = {}
-        for line in file:lines() do
-            table.insert(popularDatabases, line)
-        end
-        file:close()
-        return popularDatabases
-    else
-        stdnse.debug1("popular_dbms.lst is not located... :(")
-        return nil
-    end
-end
+
 
 -- ACTION --
 action = function(host, port)
